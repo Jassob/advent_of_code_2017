@@ -1,42 +1,27 @@
+{-# LANGUAGE FlexibleInstances #-}
 -- | Solution to fourth day in Advent of Code 2017 (adventofcode.com)
 
 import System.Environment (getArgs)
 import Data.List (nub)
 
-data Part = P1 | P2
+import Lib (Part(..), Arg(..), run_)
+
+-- Some abuse of the type classes
+instance Arg [[String]] where
+  parseInput = pure . map words . lines
 
 main :: IO ()
-main = do
-  arg <- parseArgs
-  case arg of
-    Just (P1, strs) -> print $ length . filter (==True) . map passphraseValid $ strs
-    Just (P2, strs) -> print $ length . filter (==True) . map passphraseValid' $ strs
-    Nothing         -> printUsage
+main = run_ (mkEvalFun passphraseValid) (mkEvalFun passphraseValid') usage
 
-parseArgs :: IO (Maybe (Part, [[String]]))
-parseArgs = do
-  args <- getArgs
-  case args of
-    [input]                  -> pure $ (,) <$> pure P1 <*> parseInput input
-    ["-p", part, input]      -> pure $ (,) <$> toPart part <*> parseInput input
-    ["-p", part, "-f", file] -> readFile file >>= \c -> pure $ (,) <$> toPart part <*> parseInput c
-    ["--part", part, input]  -> pure $ (,) <$> toPart part <*> parseInput input
-    _                        -> pure Nothing
+mkEvalFun :: ([String] -> Bool) -> ([[String]] -> Int)
+mkEvalFun f = length . filter (==True) . map f
 
-  where toPart :: String -> Maybe Part
-        toPart "1" = pure P1
-        toPart "2" = pure P2
-        toPart _   = Nothing
-
-parseInput :: String -> Maybe [[String]]
-parseInput = pure . map words . lines
-
-printUsage :: IO ()
-printUsage = putStrLn $ concat
-  [ "Usage: day03 [input]", "\n\n"
-  , "input is the problem input that contains the wanted ", "\n"
-  , "location and day03 calculates the number of steps ", "\n"
-  , "data is carried from a given location to the location 1."
+usage :: String
+usage = concat
+  [ "Usage: day04 [input]", "\n\n"
+  , "input is the problem input that contains a list of ", "\n"
+  , "passphrases and day04 calculates how many of the passphrases ", "\n"
+  , "that are valid, given the policies defined in the different parts."
   , "\n\n"
   , "OPTIONS:", "\n"
   , "--part, -p", "\t", "1|2", "\t", "Select between part 1 or part 2"
