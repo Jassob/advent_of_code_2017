@@ -10,7 +10,7 @@ main = do
   arg <- parseArgs
   case arg of
     Just (P1, strs) -> print $ length . filter (==True) . map passphraseValid $ strs
-    Just (P2, strs) -> undefined
+    Just (P2, strs) -> print $ length . filter (==True) . map passphraseValid' $ strs
     Nothing         -> printUsage
 
 parseArgs :: IO (Maybe (Part, [[String]]))
@@ -47,3 +47,13 @@ printUsage = putStrLn $ concat
 
 passphraseValid :: [String] -> Bool
 passphraseValid words = (length . nub) words == length words
+
+passphraseValid' :: [String] -> Bool
+passphraseValid' (w:ws) = all (not . isAnagramOf w) ws && passphraseValid' ws
+passphraseValid' [] = True
+
+-- | s1 is an anagram of s2 if s1 is a subset of s2 and s2 a subset of s1
+subsetOf :: Eq a => [a] -> [a] -> Bool
+subsetOf s1 s2 = all (`elem` s2) s1 && all (`elem` s1) s2
+
+isAnagramOf = subsetOf
