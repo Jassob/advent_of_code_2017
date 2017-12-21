@@ -4,10 +4,19 @@ module Lib where
 
 import System.Environment
 
+-- * Types and classes
+
 data Part = P1 | P2
+  deriving (Eq, Show)
 
 class Arg a where
   parseInput :: String -> Maybe a
+  checkArgs :: a -> Bool
+
+  -- Default implementation of checkArgs is to accept every value.
+  checkArgs = const True
+
+-- * Functions
 
 run_ :: Arg a => (a -> Int) -> (a -> Int) -> String -> IO ()
 run_ p1 p2 str = do
@@ -17,8 +26,12 @@ run_ p1 p2 str = do
     Nothing -> putStrLn str
 
 withFun :: Arg a => (a -> Int) -> (a -> Int) -> Maybe (Part, a) -> Maybe Int
-withFun f1 _  (Just (P1, arg)) = (pure . f1) arg
-withFun _  f2 (Just (P2, arg)) = (pure . f2) arg
+withFun _  _   Nothing          = Nothing
+withFun f1 f2  (Just (part, arg)) | checkArgs arg = pure . choose part (f1, f2) $ arg
+                                  | otherwise     = Nothing
+  where choose :: Part -> (a, a) -> a
+        choose P1 = fst
+        choose P2 = snd
 
 parseArgs :: Arg a => IO (Maybe (Part, a))
 parseArgs = do

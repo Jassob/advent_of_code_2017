@@ -1,44 +1,24 @@
+{-# LANGUAGE FlexibleInstances #-}
 -- | Solution to second day in Advent of Code 2017 (adventofcode.com)
 
 import System.Environment (getArgs)
 import Data.Maybe (fromJust, catMaybes)
 import Data.List (sortBy)
 
-data Part = P1 | P2
-  deriving (Eq, Show)
+import Lib (Part(..), Arg(..), run_)
+
+instance Arg [[Maybe Int]] where
+  parseInput = pure . filter (not . null) . map (map (pure . read) . words) . lines
 
 type PartFun = [Maybe Int] -> Maybe Int -> Maybe Int
 
 main :: IO ()
-main = do
-   checkSum <- withArgs (go [(P1, calcChecksum), (P2, calcDivSum)]) <$> parseArgs
-   case checkSum of
-     Nothing -> printUsage
-     Just c  -> print c
+main = run_ (mkRunFun calcChecksum) (mkRunFun calcDivSum) usage
 
-   where go :: [(Part, PartFun)] -> Part -> [[Maybe Int]] -> Maybe Int
-         go fs part = foldr (fromJust . lookup part $ fs) (Just 0)
+mkRunFun :: ([Maybe Int] -> Maybe Int -> Maybe Int) -> ([[Maybe Int]] -> Int)
+mkRunFun f = fromJust . foldr f (Just 0)
 
-withArgs :: (Part -> [[Maybe Int]] -> Maybe Int) -> Maybe (Part, [[Maybe Int]]) -> Maybe Int
-withArgs f arg = arg >>= uncurry f
-
-parseArgs :: IO (Maybe (Part, [[Maybe Int]]))
-parseArgs = do
-  args <- getArgs
-  case args of
-    [input]                  -> pure $ (,) <$> pure P1 <*> parseInput input
-    ["-p", part, input]      -> pure $ (,) <$> toPart part <*> parseInput input
-    ["-p", part, "-f", file] -> readFile file >>= \c -> pure $ (,) <$> toPart part <*> parseInput c
-    ["--part", part, input]  -> pure $ (,) <$> toPart part <*> parseInput input
-    _                        -> pure Nothing
-
-  where toPart :: String -> Maybe Part
-        toPart "1" = pure P1
-        toPart "2" = pure P2
-        toPart _   = Nothing
-
-printUsage :: IO ()
-printUsage = putStrLn $ concat
+usage = concat
   [ "Usage: day02 [OPTIONS] [input]", "\n\n"
   , "input is the problem input that contains "
   , "a grid of _only_ digits and day02 calculates the checksum "
@@ -51,9 +31,6 @@ printUsage = putStrLn $ concat
   , "\n\n"
   , "-f", "\t", "FILEPATH", "Path to file containing the problem input."
   ]
-
-parseInput :: String -> Maybe [[Maybe Int]]
-parseInput = pure . filter (not . null) . map (map (pure . read) . words) . lines
 
 -- | Part 1
 calcChecksum :: [Maybe Int] -> Maybe Int -> Maybe Int
