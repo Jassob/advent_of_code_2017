@@ -19,18 +19,23 @@ instance Arg PC where
     where instrs :: Vector Instruction
           instrs = fromList . map (Instr . read) . lines $ str
 
-step :: PC -> Int
-step (PC _ _ _ True) = 0
-step pc              = 1 + step (step' pc)
+step :: (Int -> Int) -> PC -> Int
+step _ (PC _ _ _ True) = 0
+step f pc              = 1 + step f (step' f pc)
 
-step' :: PC -> PC
-step' (PC instrs len (Pointer ptr) done) = PC instrs' len (Pointer ptrIdx') (ptrIdx' >= len)
+step' :: (Int -> Int) -> PC -> PC
+step' incFun (PC instrs len (Pointer ptr) done) = PC instrs' len (Pointer ptrIdx') (ptrIdx' >= len)
   where (Instr curInstr) = instrs ! ptr
-        instrs' = instrs // [(ptr, Instr $ curInstr + 1)]
+        instrs' = instrs // [(ptr, Instr . incFun $ curInstr)]
         ptrIdx' = ptr + curInstr
 
 main :: IO ()
-main = run_ step undefined usage
+main = run_ (step part1) (step part2) usage
+  where part1 :: Int -> Int
+        part1 = (+1)
+
+        part2 :: Int -> Int
+        part2 i = if i >= 3 then i - 1 else i + 1
 
 usage :: String
 usage = concat
