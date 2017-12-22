@@ -4,14 +4,14 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, stdenv }:
+  f = { mkDerivation, base, stdenv, vector}:
       mkDerivation {
         pname = "jassob-haskell";
         version = "0.1.0.0";
         src = ./.;
         isLibrary = false;
         isExecutable = true;
-        executableHaskellDepends = [ base ];
+        executableHaskellDepends = [ base vector ];
         license = stdenv.lib.licenses.mit;
       };
 
