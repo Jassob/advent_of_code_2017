@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
--- | Solution to second day in Advent of Code 2017 (adventofcode.com)
+-- | Solution to fifth day in Advent of Code 2017 (adventofcode.com)
 
 import Prelude hiding (length)
 import Data.Vector (Vector, (!), (//), fromList, length)
