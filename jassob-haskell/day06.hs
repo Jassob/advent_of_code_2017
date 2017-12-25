@@ -3,7 +3,9 @@
 
 import           Data.Function (on)
 import           Data.Foldable (maximumBy)
-import           Data.Vector (Vector, (!), (//), fromList, indexed)
+import           Data.Set (Set)
+import qualified Data.Set as S
+import           Data.Vector (Vector, (!), (//), indexed)
 import qualified Data.Vector as V
 
 import Lib (Part(..), Arg(..), run_)
@@ -12,15 +14,15 @@ type Bank = Int
 type Memory = Vector Bank
 
 instance Arg Memory where
-  parseInput = pure . fromList .  map read . words
+  parseInput = pure . V.fromList .  map read . words
 
 main :: IO ()
-main = run_ (part1 []) undefined usage
+main = run_ (part1 S.empty) undefined usage
 
-part1 :: [Memory] -> Memory -> Int
+part1 :: Set Memory -> Memory -> Int
 part1 mems mem
-  | mem `elem` mems = length mems
-  | otherwise = part1 (mem : mems) (reallocate mem)
+  | mem `S.member` mems = S.size mems
+  | otherwise = part1 (mem `S.insert` mems) (reallocate mem)
 
 reallocate :: Memory -> Memory
 reallocate mem = updateMemory mem' 0 blocksPerBank extraBlockIdxs
