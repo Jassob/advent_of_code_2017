@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TupleSections #-}
 -- | Solution to sixth day in Advent of Code 2017 (adventofcode.com)
 
-import           Data.Function (on)
-import           Data.Foldable (maximumBy)
+import           Data.Bool (bool)
+import           Data.Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as S
-import           Data.Vector (Vector, (!), (//), indexed)
+import           Data.Vector (Vector, (!), (//), indexed, elemIndex)
 import qualified Data.Vector as V
 
 import Lib (Part(..), Arg(..), run_)
@@ -25,27 +26,27 @@ part1 mems mem
   | otherwise = part1 (mem `S.insert` mems) (reallocate mem)
 
 reallocate :: Memory -> Memory
-reallocate mem = updateMemory mem' 0 blocksPerBank extraBlockIdxs
-  where (mem', (idx, blocks)) = findNextBank mem
-        blocksPerBank = blocks `div` length mem
-        extraBlockIdxs = map (`mod` length mem) [idx+1 .. idx + blocks `mod` length mem]
+reallocate mem = updateMemory (mem // [(idx, 0)]) newBlocks extraBlocks
+  where (idx, oldBlocks) = findNextBank mem
 
-        updateMemory :: Memory -> Int -> Int -> [Int] -> Memory
-        updateMemory mem idx bpb extrb
-          | idx >= length mem = mem
-          | otherwise = updateMemory mem (idx + 1) bpb extrb
-            // [(idx, mem ! idx + blocks' idx bpb extrb)]
+        newBlocks = oldBlocks `div` length mem
 
-        blocks' :: Int -> Int -> [Int] -> Int
-        blocks' idx blocks extrb | idx `elem` extrb = blocks + 1
-                                 | otherwise = blocks
+        extraBlocks = map (`mod` length mem)
+                      [idx+1 .. idx + oldBlocks `mod` length mem]
 
-findNextBank :: Memory -> (Memory, (Int, Bank))
-findNextBank mem = (mem // [(idx, 0)], (idx, blocks))
-  where (idx, blocks) = V.head
-                        . V.filter ((== maximum mem) . snd)
-                        . indexed $ mem
+updateMemory :: Memory -> Int -> [Int] -> Memory
+updateMemory mem bpb extrb = foldr go mem [0..length mem - 1]
+  where go :: Int -> Memory -> Memory
+        go idx mem = mem // [(idx, mem ! idx + newBlocks idx)]
 
+        newBlocks :: Int -> Int
+        newBlocks = bool bpb (bpb + 1) . (`elem` extrb)
+
+findNextBank :: Memory -> (Int, Bank)
+findNextBank mem = maybe (error errmsg) (,max) $ elemIndex max mem
+  where max = maximum mem
+        errmsg = "findNextBank: " ++ show max ++
+                 " is not present in the memory bank."
 usage :: String
 usage = concat
   [ "Usage: day06 [OPTIONS] [input]", "\n\n"
