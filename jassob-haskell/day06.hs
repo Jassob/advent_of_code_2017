@@ -4,8 +4,8 @@
 
 import           Data.Bool (bool)
 import           Data.Maybe (maybe)
-import           Data.Map.Lazy (Map)
-import qualified Data.Map.Lazy as M
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Vector (Vector, (!), (//), indexed, elemIndex)
