@@ -4,6 +4,8 @@
 
 import           Data.Bool (bool)
 import           Data.Maybe (maybe)
+import           Data.Map.Lazy (Map)
+import qualified Data.Map.Lazy as M
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Vector (Vector, (!), (//), indexed, elemIndex)
@@ -18,12 +20,27 @@ instance Arg Memory where
   parseInput = pure . V.fromList .  map read . words
 
 main :: IO ()
-main = run_ (part1 S.empty) undefined usage
+main = run_ (part1 S.empty) (part2 M.empty) usage
 
 part1 :: Set Memory -> Memory -> Int
 part1 mems mem
   | mem `S.member` mems = S.size mems
   | otherwise = part1 (mem `S.insert` mems) (reallocate mem)
+
+part2 :: Map Memory Int -> Memory -> Int
+part2 mems mem =
+  case mem `M.lookup` mems of
+    Just i -> if i == 2
+              then part2 mems' (reallocate mem)
+              else findLoopLength 2 mems
+
+    Nothing -> part2 (M.insert mem 1 mems) (reallocate mem)
+
+  where findLoopLength :: Int -> Map Memory Int -> Int
+        findLoopLength itrs = length . filter (==itrs) . M.elems
+
+        mems' :: Map Memory Int
+        mems' = M.alter (pure . maybe 0 (+1)) mem mems
 
 reallocate :: Memory -> Memory
 reallocate mem = updateMemory (mem // [(idx, 0)]) newBlocks extraBlocks
