@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 -- | Solution to seventh day of Advent of Code 2017 (adventofcode.com)
 
+import           Data.Foldable (maximumBy, minimumBy)
+import           Data.Function (on)
+import           Data.List (sort, group)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Maybe (isNothing, fromMaybe)
@@ -11,7 +14,7 @@ import Lib (Part(..), Arg(..), run)
 
 import Debug.Trace
 
-data Tree a = Node a [Tree a] | Leaf a
+data Tree a = Node a [Tree a]
   deriving (Eq, Show, Read)
 
 data Program = Prog { name :: String
@@ -32,7 +35,13 @@ part1 :: Tree Program -> String
 part1 (Node p _) = name p
 
 part2 :: Tree Program -> String
-part2 = undefined
+part2 (Node p subs) = case unbalancedSubtree (Node p subs) of
+  (Just st@(Node p' _)) -> case unbalancedSubtree st of
+    Just st' -> part2 st
+    Nothing  -> show $ weight p' - diff
+      where weights = group . sort . map totalWeight $ subs
+            diff = (head . minimumBy (compare `on` length) $ weights) - (head . maximumBy (compare `on` length) $ weights)
+  Nothing   -> error "Tree is balanced."
 
 prepareString :: String -> [String]
 prepareString = lines . filter (/=',')
@@ -78,6 +87,20 @@ getWeight :: Map String Int -> String -> Either String Int
 getWeight map prog = maybe (error $ "getWeight: Node " ++ show prog
                                     ++ " is not associated with a weight")
                             pure (M.lookup prog map)
+
+totalWeight :: Tree Program -> Int
+totalWeight (Node p subs) = weight p + foldr ((+) . totalWeight) 0 subs
+
+unbalancedSubtree :: Tree Program -> Maybe (Tree Program)
+unbalancedSubtree (Node p subs)
+  | all (== head subweights) subweights = Nothing
+  | otherwise = case filter ((== head subweights) . snd) pairs of
+      [(t, w)] -> pure t
+      (_:_)    -> pure . fst . head . filter ((/= head subweights) . snd) $ pairs
+  where subweights = map totalWeight subs
+        pairs = zip subs subweights
+
+
 usage :: String
 usage = concat
   [ "Usage: day07 [OPTIONS] [input]", "\n\n"
