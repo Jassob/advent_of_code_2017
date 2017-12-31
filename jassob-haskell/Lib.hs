@@ -25,7 +25,14 @@ run_ p1 p2 str = do
     Just i  -> print i
     Nothing -> putStrLn str
 
-withFun :: Arg a => (a -> Int) -> (a -> Int) -> Maybe (Part, a) -> Maybe Int
+run :: Arg a => (a -> b) -> (a -> b) -> String -> IO b
+run p1 p2 str = do
+  res <- withFun p1 p2 <$> parseArgs
+  case res of
+    Just a  -> pure a
+    Nothing -> error "run: Nothing"
+
+withFun :: Arg a => (a -> b) -> (a -> b) -> Maybe (Part, a) -> Maybe b
 withFun _  _   Nothing          = Nothing
 withFun f1 f2  (Just (part, arg)) | checkArgs arg = pure . choose part (f1, f2) $ arg
                                   | otherwise     = Nothing
