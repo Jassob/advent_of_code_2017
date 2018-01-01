@@ -17,6 +17,9 @@ import Debug.Trace
 data Tree a = Node a [Tree a]
   deriving (Eq, Show, Read)
 
+headT :: Tree a -> a
+headT (Node a _) = a
+
 data Program = Prog { name :: String
                     , weight :: Int }
   deriving (Eq, Show, Read)
@@ -66,27 +69,43 @@ buildMaps ls = go ls M.empty M.empty M.empty
 buildTree :: Map String [String] -> Map String (Maybe String) -> Map String Int -> Either String (Tree Program)
 buildTree subMap prevMap weightMap = do
   root <- findRoot prevMap weightMap
-  buildTree' subMap weightMap root
+  buildTree' root
 
-  where buildTree' :: Map String [String] -> Map String Int -> Tree Program -> Either String (Tree Program)
-        buildTree' subMap weightMap (Node p _) = flip (maybe (error $ "buildTree': Incomplete tree, node " ++ show p ++ " has no sub trees"))
-                                                 (M.lookup (name p) subMap) $ \subs -> do
+  where buildTree' :: Tree Program -> Either String (Tree Program)
+        buildTree' node =
+          maybe (error' . headT $ node) (buildNode node) (getSubs . headT $ node)
+
+        error' :: Program -> a
+        error' p = error $ "buildTree': Incomplete tree, node " ++ show p ++ " has no sub trees"
+
+        getSubs :: Program -> Maybe [String]
+        getSubs = flip M.lookup subMap . name
+
+        buildNode :: Tree Program -> [String] -> Either String (Tree Program)
+        buildNode (Node p _) subs = do
           progs <- zipWith Prog subs <$> mapM (getWeight weightMap) subs
-          progTrees <- mapM (\p -> buildTree' subMap weightMap (Node p [])) progs
+          progTrees <- mapM (buildTree' . flip Node []) progs
           pure (Node p progTrees)
 
-        findRoot :: Map String (Maybe String) -> Map String Int -> Either String (Tree Program)
-        findRoot prevMap weightMap = do
-          rootProgram <- case M.toList . M.filter isNothing $ prevMap of
-            [(rootNode,_)] -> maybe (error "findRoot: Root node is not associated with a weight.")
-                                    (Right . Prog rootNode) (M.lookup rootNode weightMap)
-            _              -> error "findRoot: There are more than one tree."
-          pure $ Node rootProgram []
+findRoot :: Map String (Maybe String) -> Map String Int -> Either String (Tree Program)
+findRoot prevMap weightMap = case M.toList . M.filter isNothing $ prevMap of
+  [(rootNode,_)] -> maybe (error noRootMsg) (pure . mkNode rootNode) (M.lookup rootNode weightMap)
+  _              -> error manyRootsMsg
+
+  where noRootMsg :: String
+        noRootMsg = "findRoot: Root node is not associated with a weight."
+
+        manyRootsMsg :: String
+        manyRootsMsg = "findRoot: There are more than one tree."
+
+        mkNode :: String -> Int -> Tree Program
+        mkNode name = flip Node [] . Prog name
+
 
 getWeight :: Map String Int -> String -> Either String Int
-getWeight map prog = maybe (error $ "getWeight: Node " ++ show prog
-                                    ++ " is not associated with a weight")
-                            pure (M.lookup prog map)
+getWeight map prog = maybe error' pure (M.lookup prog map)
+  where error' :: a
+        error' = error $ "getWeight: Node " ++ show prog ++ " is not associated with a weight"
 
 totalWeight :: Tree Program -> Int
 totalWeight (Node p subs) = weight p + foldr ((+) . totalWeight) 0 subs
@@ -100,7 +119,6 @@ unbalancedSubtree (Node p subs)
   where subweights = map totalWeight subs
         pairs = zip subs subweights
 
-
 usage :: String
 usage = concat
   [ "Usage: day07 [OPTIONS] [input]", "\n\n"
@@ -113,18 +131,3 @@ usage = concat
   , "\n\n"
   , "-f", "\t", "FILEPATH","\t", "Path to file containing the problem input."
   ]
-
-exampleProgramTree :: String
-exampleProgramTree = "pbga (66)\n\
-                     \xhth (57)\n\
-                     \ebii (61)\n\
-                     \havc (66)\n\
-                     \ktlj (57)\n\
-                     \fwft (72) -> ktlj, cntj, xhth\n\
-                     \qoyq (66)\n\
-                     \padx (45) -> pbga, havc, qoyq\n\
-                     \tknk (41) -> ugml, padx, fwft\n\
-                     \jptl (61)\n\
-                     \ugml (68) -> gyxo, ebii, jptl\n\
-                     \gyxo (61)\n\
-                     \cntj (57)"
